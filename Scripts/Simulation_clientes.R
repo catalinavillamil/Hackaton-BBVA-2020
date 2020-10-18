@@ -327,4 +327,5 @@ pprest=base_jueves[(hour(base_jueves$fecha)>=11)&(hour(base_jueves$fecha)<=14),c
 ppbar=base_jueves[(id %in% dan)&
                     (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))||
                        (((hour(base_jueves$fecha)>=0))&((hour(base_jueves$fecha)>=5)))),c("x","y")]
-ppzc=base_jueves[day()]
+ppzc=base_jueves[(day(base_jueves$fecha) %in% 3:4)&
+                 (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))),c("x","y")]
