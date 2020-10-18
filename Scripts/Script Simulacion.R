@@ -29,6 +29,8 @@ library(pROC)
 ##-----------------------------------------
 df<-read.csv('C:\\Users\\Julian Ricardo\\Downloads\\Clientes.csv',header=TRUE,sep=",")
 df_perfiles<-read.csv('C:\\Users\\Julian Ricardo\\Desktop\\Hackathon\\perfiles.csv',header=TRUE,sep=",")
+work<-read.csv('C:\\Users\\Julian Ricardo\\Desktop\\Hackathon\\work.csv',header=TRUE,sep=",")
+home<-read.csv('C:\\Users\\Julian Ricardo\\Desktop\\Hackathon\\home.csv',header=TRUE,sep=",")
 
 source("C:\\Users\\Julian Ricardo\\Desktop\\Hackathon\\Funciones.txt")
 
@@ -540,6 +542,19 @@ df %>%
          tipo%in%c('app','no_app')) %>% 
   arrange(desc(hipo_medio_pred))
 
+##-----------------------------------------
+## AGREGAR 
+##-----------------------------------------
+
+df<-df %>% 
+  left_join(home,by="id") %>% 
+  rename(lon_vivienda=x,
+         lat_vivienda=y) %>% 
+  left_join(work,by='id') %>% 
+  rename(lon_trabajo=x,
+          lat_trabajo=y) %>% 
+  mutate(ubi_trabajo=NULL,
+         ubi_vivienda=NULL)
 
 
 write.csv(df, "db_clientes_perfil.csv", row.names = F)
