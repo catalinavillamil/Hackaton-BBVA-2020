@@ -60,7 +60,7 @@ Y1= 4.7082
 X2= -74.05393
 Y2= 4.65386
 # base
-n=10
+n=100
 base_jueves = expand.grid(sec_jueves, 1:n)
 colnames(base_jueves)=c("fecha","id")
 
@@ -376,7 +376,15 @@ es= cbind(es,base_jueves[,c("fecha","id")])
 es= es %>% arrange(id,X2) %>% 
   group_by(id) %>% 
   mutate(n=1:n()) %>% 
-  filter(n<=10) %>%
+  filter(n<=100) %>%
 es=es %>% 
   select(-X2 ,-n)
 save(es, file = 'data_cata.Rda')
+
+aux= est %>% 
+  mutate(lon=(x*(X1-X2))+X2,
+         lat=(y*(Y1-Y2))+Y2,
+         id=1:106)
+colnames(est)=c("")
+save(aux, file = 'data_cata_est.Rda')
+  
