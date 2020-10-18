@@ -40,7 +40,7 @@ ui <- shinyUI(
                                 .skin-blue .main-sidebar {
                                 background-color: #2D5FCC;
                                 }
-                              '))))
+                              ')))),
                 dashboardBody(
                   tabsetPanel(type = 'tabs',
                               tabPanel('Análisis Departamentos',
@@ -109,8 +109,8 @@ server <- function(input, output) {
     leaflet() %>%
       addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron)%>%
-      fitBounds(lng1 = -74.05393,lat1 = 4.65386,
-                lng2 = -71.1080,lat2 = 4.7082)# set to reactive minimums
+      fitBounds(lng1 = -74.05393,lat1 = 4.655,
+                lng2 = -74.09,lat2 = 4.66)# set to reactive minimums
   })
   
   observe({
