@@ -28,7 +28,7 @@ library(SiMRiv)
 library(spatstat)
 library(tibble)
 library(dplyr)
-#library(data.table)
+library(data.table)
 #
 # levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
 # for(i in 1:(n*0.4)){
@@ -47,7 +47,7 @@ normalize <- function(x)
 # JUEVES
 min_time_jueves <- as.POSIXct("2020-01-01 06:00:00")
 sec_jueves <- seq(from = min_time_jueves, length.out = 10440, by = 30)
-X1= -71.1080
+X1= -74.1080
 Y1= 4.7082
 X2= -74.05393
 Y2= 4.65386
@@ -61,9 +61,9 @@ set.seed(14)
 pp <- rpoispp(n)
 plot(density(pp))
 pi=tibble(id=1:n,x=pp$x[0:n],y=pp$y[0:n])
-# pi2=pi %>% 
-#   mutate(x=(x*(X1-X2))+X2,
-#          y=(y*(Y1-Y2))+Y2)
+pi2=pi %>%
+  mutate(x=(x*(X1-X2))+X2,
+         y=(y*(Y1-Y2))+Y2)
 # trabajadores:
 wk=sort(sample(1:n,n*0.6))
 # LUGARES DE TRABAJO 
@@ -71,11 +71,11 @@ set.seed(12345)
 pp <- rpoispp(n*0.6)
 plot(density(pp))
 wp=tibble(id= wk,x=pp$x[0:(n*0.6)],y=pp$y[0:(n*0.6)])
-# wp2=wp %>% 
-#   mutate(x=(x*(X1-X2))+X2,
-#          y=(y*(Y1-Y2))+Y2)
-# fwrite(pi2,"home.csv")
-# fwrite(wp2,"work.csv")
+wp2=wp %>%
+  mutate(x=(x*(X1-X2))+X2,
+         y=(y*(Y1-Y2))+Y2)
+fwrite(pi2,"home.csv")
+fwrite(wp2,"work.csv")
 # home to work
 hw = pi %>% 
   inner_join(wp, by="id") 
@@ -157,8 +157,12 @@ for(i in nwk[-1]){
   df= df  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
-df$x=normalize(df$x)
-df$y=normalize(df$y)
+df= df %>% 
+  left_join(wp,by="id") %>% 
+  mutate(x=ifelse(ida==1,x.x+x.y,0),
+         y=ifelse(ida==1,y.x+y.y,0)
+  ) %>% 
+  select(c(x,y,id,fecha))
 
 # VIERNES
 
@@ -180,8 +184,12 @@ for(i in nwk[-1]){
   viedan= viedan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
-viedan$x=normalize(viedan$x)
-viedan$y=normalize(viedan$y)
+viedan= viedan %>% 
+  left_join(wp,by="id") %>% 
+  mutate(x=ifelse(ida==1,x.x+x.y,0),
+         y=ifelse(ida==1,y.x+y.y,0)
+  ) %>% 
+  select(c(x,y,id,fecha))
 
 #SABADO
 
