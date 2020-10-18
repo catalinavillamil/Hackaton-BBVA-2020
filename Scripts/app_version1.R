@@ -1,28 +1,28 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
-library(shiny)
+
 library(leaflet)
 library(dplyr)
 library(shiny)
 library(shinydashboard)
-library(dplyr)
 library(ggplot2)
-library(ggpmisc)
-library(ggiraph)
-library(DT)
+# library(ggpmisc)
 library(shinyWidgets)
 library(shinyjs)
+library(ggimage)
+library(ggthemes)
+
 
 # Define UI for application that draws a map
 
-min_time <- as.POSIXct("2020-01-01 05:00:00")
+min_time <- as.POSIXct("2020-01-01 06:00:00")
 
-secuencia <- seq(from = min_time, length.out = 1020, by = "mins")
+secuencia <- seq(from = min_time, length.out = 1800, by = 30)
 
 clientes <- as.character(1:15000)
 
-producto <- paste('Producto', 1:10, sep = '_')
+producto <- paste('Producto', 1:5, sep = '_')
 
 establecimiento <- paste('Establecimiento', 1:150, sep ='_')
 
@@ -74,13 +74,48 @@ min_x <- min(summary_total$hora_cierra)
 max_x <- max(summary_total$hora_cierra)
 saltos <- seq(min_x, max_x, l = 10)
 
+df2 <- data.frame(Producto = c("Producto_1", "Producto_2", "Producto_3", "Producto_4", "Producto_5"),
+                  Image = sample(c("image1.png","image2.png", "image1.png", "image1.png", "image2.png")),
+                  stringsAsFactors = F)
+
 
 ui <- shinyUI(
-  dashboardPage(dashboardHeader(title = span("Geo Ritmo",
-                                             style = "color: white; font-size: 14px"),
-                                titleWidth = 400),
+  dashboardPage(dashboardHeader(title = span("",
+                                             style = "color: white; font-size: 14px")
+                                ),
                 dashboardSidebar(),
                 dashboardBody(
+                  tags$style(HTML('
+                       /* logo */
+                       .skin-blue .main-header .logo {
+                       background-color: #072146;
+                       }
+                       /* logo when hovered */
+                       .skin-blue .main-header .logo:hover {
+                       background-color: #072146;
+                       }
+                       /* navbar (rest of the header) */
+                       .skin-blue .main-header .navbar {
+                       background-color: #072146;
+                       }
+                       /* active selected tab in the sidebarmenu */
+                       .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+                       background-color: #072146;
+                       }
+                                  /* body */
+                                .content-wrapper, .right-side {
+                                background-color: #072146;
+                                }
+                                ".irs-bar {",
+           "  border-color: transparent;",
+           "  background-color: transparent;",
+           "}",
+           ".irs-bar-edge {",
+           "  border-color: transparent;",
+           "  background-color: transparent;",
+           "}"
+                       ')
+                  ),
                   useShinyjs(),
                   tabsetPanel(type = 'tabs',
                               tabPanel('Offer Summary',
@@ -94,24 +129,27 @@ ui <- shinyUI(
                                                        value = min(base_final$Hora),
                                                        step = 1800, 
                                                        animate =
-                                                         animationOptions(interval = 1500, loop = TRUE))
+                                                         animationOptions(interval = 3000, loop = TRUE))
                                          )
                                        ), 
                                        fluidRow(offset = 0,
+                                       column(width = 1),
                                        column(
-                                         width = 6, offset = 0,
+                                         width = 5, offset = 0,
                                          style='padding-top:0px;padding-bottom:10px; padding-left:0px',
-                                         plotOutput(outputId = 'tabla_summary', width = "100%")
+                                         plotOutput(outputId = 'tabla_summary', width = "80%")
                                        ),
+                                   
                                        column(
-                                         width = 6, offset = 0,
-                                         style='padding-top:0px;padding-bottom:10px; padding-left:0px',
-                                         plotOutput(outputId = 'ordering', width = "100%")
+                                         width = 5, offset = 0,
+                                         style='padding-top:0px;padding-bottom:30px; padding-left:0px',
+                                         plotOutput(outputId = 'ordering', width = "80%")
                                        )
                                        ),
                                        fluidRow(
+                                         column(width = 1),
                                      column(
-                                         width = 9,
+                                         width = 10,
                                          DT::dataTableOutput(outputId = 'tabla_inicial', width = "100%")
                                        )
                                        )
@@ -157,7 +195,13 @@ server <- function(input, output) {
                   options = list(sDom  = '<"top">lrt<"bottom">ip', 
                                  lengthChange = FALSE,
                                  dom = 'l',
-                                 searchable = FALSE))
+                                 searchable = FALSE,
+                                 initComplete = JS(
+                                   "function(settings, json) {",
+                                   "$('td').css({'border': '1px solid black'});",
+                                   "$('th').css({'border': '1px solid black'});",
+                                   "$(this.api().table().header()).css({'background-color': '#517fb9', 'color': '#fff'});",
+                                   "}")))
   })
   
   
@@ -170,30 +214,70 @@ server <- function(input, output) {
     selTable <- Lista[-nrow(Lista),]
     
     ggplot(selTable, aes(x=hora_cierra, y=n)) +
-      geom_line() + 
+      geom_line(color = 'white') + 
       xlab("Hour") +
       ylab("Sent messages") +
       ylim(min_n, max_n) + 
       xlim(min_x, max_x) +
       scale_x_datetime(date_labels = "%H:%M:%S",limits=c(min_x, max_x)) +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            panel.background = element_blank(), axis.line = element_line(colour = "black")) 
+            plot.background=element_rect(fill = "#072146"),
+            panel.background = element_rect(fill = '#072146'),
+            panel.border = element_rect(colour = "#072146", fill=NA, size=1),
+            plot.title = element_text(hjust = 0.5, colour = 'white'),
+            axis.text.x=element_text(colour="white"),
+            axis.title.x = element_text(colour = 'white'),
+            axis.text.y=element_text(colour="white"),
+            axis.title.y = element_text(colour = 'white')) +
+      ggtitle("Sent messages every 30 min")
     
     
   })
   
   output$ordering <- renderPlot({
     req(filteredData())
+    
+    fecha_filtro <- max(filteredData()$Hora) - 10800
     Lista <- filteredData() %>% 
+      filter(Hora >= fecha_filtro) %>% 
       group_by(Producto) %>% 
-      summarise(n=n())
+      summarise(n=sum(Mensaje_Enviado))
     
-    selTable <- Lista
+    selTable <- Lista %>% 
+      arrange(desc(n)) %>% 
+      left_join(df2)
     
-    ggplot(selTable, aes(x = reorder(Producto, -n), y = n)) +
-      coord_flip() +
-      geom_bar(stat="identity", color='skyblue',fill='steelblue') +
-      theme(axis.text.x=element_text(angle=45, hjust=1))
+   colors_blue <- data.frame(Producto = unique(selTable$Producto),
+            colores_blue = RColorBrewer::brewer.pal(length(unique(selTable$Producto)), 'Blues'))
+    
+  
+   selTable <- selTable %>% 
+     left_join(colors_blue)
+   
+ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue, color = colores_blue)) +
+      geom_col() +
+      scale_fill_manual(values = selTable$colores_blue)  +
+      geom_text(aes(y = 0, label = Producto), size = 5, color="black", hjust = -0.05) +
+      geom_image(aes(x = Producto, image = Image), y = 0,  # add geom_image layer
+                 size = 0.1, hjust = 1,
+                 inherit.aes = FALSE) +
+      coord_flip(clip = "off", expand = FALSE) +
+      scale_y_continuous(labels = scales::comma) +
+      guides(color = FALSE, fill = FALSE) +
+      theme_classic() +
+      theme(plot.title = element_text(hjust = 0.5, colour = 'white'),
+            axis.ticks.y = element_blank(),
+            axis.text.y  = element_blank(),
+            plot.margin = margin(1, 1, 1, 4, "cm"),
+            axis.title.y=element_blank(),
+            plot.background=element_rect(fill = "#072146"),
+            panel.background = element_rect(fill = '#072146'),
+            panel.border = element_rect(colour = "#072146", fill=NA, size=1),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text.x=element_text(colour="white")) +
+      ylab("") +
+  ggtitle("Top 5 of products whit message (Last 3Hours)")
     
     
   })
@@ -202,7 +286,7 @@ server <- function(input, output) {
   
   
   
-  addClass(selector = "body", class = "sidebar-collapse")
+  # addClass(selector = "body", class = "sidebar-collapse")
   
   
 }
@@ -224,5 +308,21 @@ shinyApp(ui = ui, server = server)
 
 
 
-  
- 
+
+
+# 
+# Lista <- base_final_3 %>% 
+#   group_by(Producto) %>% 
+#   summarise(n=n())
+
+
+
+# fecha_filtro <- max(base_final_3$Hora) - 10800
+# Lista <- base_final_3 %>% 
+#   filter(Hora >= fecha_filtro) %>% 
+#   group_by(Producto) %>% 
+#   summarise(n=sum(Mensaje_Enviado))
+# 
+# selTable <- Lista %>% 
+#   left_join(df2)
+
