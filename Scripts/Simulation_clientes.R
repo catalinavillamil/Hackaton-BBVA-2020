@@ -303,6 +303,22 @@ base_jueves = base_jueves %>%
   select(c(x,y,id,fecha)) 
 
 base_jueves = base_jueves%>% 
-  mutate(x=ifelse(()))
+  left_join(pi,by="id") %>% 
+  mutate(x=ifelse((is.na(x.x)&
+                     (((hour(fecha)<9)&
+                     (hour(fecha)>=0))||
+                     ((hour(fecha)>=24)&
+                     (hour(fecha)>=18)))), x.y,x.x),
+         y=ifelse((is.na(y.x)&
+                     (((hour(fecha)<9)&
+                         (hour(fecha)>=0))||
+                        ((hour(fecha)>=24)&
+                           (hour(fecha)>=18)))), y.y,y.x)) %>% 
+  select(c(x,y,id,fecha)) 
+
+aa=which(is.na(base_jueves$x))
+for(i in aa){
+  base_jueves[i,]$x=base_jueves[i-1,]$x
+}
 
 
