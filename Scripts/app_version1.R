@@ -1,6 +1,7 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
+setwd('/home/ubuntu')
 
 library(leaflet)
 library(dplyr)
@@ -91,12 +92,17 @@ saltos <- seq(min_x, max_x, l = 10)
 
 
 data_clientes <- fread('db_clientes_perfil.csv')
+# names(data_clientes) <- gsub('_rta', '', names(data_clientes))
 
-opciones_prod <- toupper(gsub('_',' ',gsub('pred','',names(data_clientes)[grepl( 'pred', names(data_clientes))])))
-opciones_tc <- c('SI','NO')
+opciones_prod <- toupper(gsub('_',' ',gsub('pred','',names(data_clientes)[grepl('pred', names(data_clientes))])))
+opciones_tc <- c(1,0)
 min_ingresos <- min(data_clientes$ingresos)
 max_ingresos <- max(data_clientes$ingresos)
 
+
+esta <- fread("Establecimientos.csv", header = T)
+categorias <- unique(esta$Categoría)
+lugares <- unique(esta$Nombre)
 
 ui <- shinyUI(
   dashboardPage(dashboardHeader(title = span("",
@@ -105,7 +111,7 @@ ui <- shinyUI(
                 dashboardSidebar(
                 ),
                 dashboardBody(
-                  tags$style(HTML('
+              tags$style(HTML('
                        /* logo */
                        .skin-blue .main-header .logo {
                        background-color: #072146;
@@ -150,7 +156,7 @@ border-color: transparent;
                   ),
                  
                   tabsetPanel(type = 'tabs',
-                              tabPanel('Offer Summary',
+                              tabPanel('Resumen de oferta',
                                        fluidRow(
                                          style='padding-top:20px;padding-bottom:10px; padding-left:0px',
                                          valueBoxOutput("resu1"),
@@ -203,43 +209,119 @@ border-color: transparent;
                                       
                                    
                               ), 
-                              tabPanel('Campaigns',
+                              tabPanel('Campañas',
                                        fluidRow(
-                                         column(width = 1),
+                                         column(8),
+                                         column(4,
+                                                tags$head(tags$style(HTML(' #Reg { color:#FFFFFF  ;}'  ))),
+                                                selectInput("camp", 
+                                                            h3(p("Seleccione la campaña",style="color:#FFFFFF")),
+                                                            choices = c('GeoMensaje', 'Mensaje'),
+                                                            multiple = F,
+                                                            selected = NA)
+                                         )
+                                       ),
+                                       fluidRow(
                                          column(width = 3,
                                                 style='padding-top:20px;padding-bottom:5px; padding-left:10px',
-                                       selectInput(inputId = 'prod',
-                                                   label= "Producto",
-                                                   choices = opciones_prod,
-                                                   selected = NA,
-                                                   multiple = TRUE)
+                                                tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                                selectInput("prod", 
+                                                             h3(p("Seleccione producto",style="color:#FFFFFF")),
+                                                             choices = opciones_prod,
+                                                             multiple = T,
+                                                             selected = NA),
+                                         ),
+                                         column(width = 3,
+                                                style='padding-top:20px;padding-bottom:5px; padding-left:10px',
+                                                tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                                selectInput("tc", 
+                                                            h3(p("Tarjeta crédito",style="color:#FFFFFF")),
+                                                            choices = opciones_tc,
+                                                            selected = NA),
                                          ),
                                        column(width = 3,
-                                              style='padding-top:20px;padding-bottom:5px; padding-left:10px',
-                                         selectInput(inputId = 'tc',
-                                                     label= "Tarjeta Credito",
-                                                     choices = opciones_tc,
-                                                     selected = NA,
-                                                     multiple = FALSE)
-                                       ),
-                                       column(width = 4,
-                                              style='padding-top:20px;padding-bottom:5px; padding-left:10px',
-                                              sliderInput("ingresos", "Ingresos",
+                                              style='padding-top:10px;padding-bottom:5px; padding-left:10px',
+                                              tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                              sliderInput("ingresos",
+                                                          h3(p("Ingresos mínimos",style="color:#FFFFFF")),
                                                           min = min_ingresos, max = max_ingresos, value = max_ingresos
+                                              )
+                                       ),
+                                       column(width = 3,
+                                              style='padding-top:10px;padding-bottom:5px; padding-left:10px',
+                                              tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                              sliderInput("proba",
+                                                          h3(p("Prob min de compra",style="color:#FFFFFF")),
+                                                          min = 0, max = 1, value = 0
                                               )
                                        )
                                        ),
                                        fluidRow(
-                                         style='padding-top:0px;padding-bottom:10px; padding-left:0px',
-                                         valueBoxOutput("resu4"),
-                                         valueBoxOutput("resu5"),
-                                         valueBoxOutput("resu6")
+                                         column(5,
+                                                actionButton(inputId = "Clic", label = 'Genere los clientes'))
                                        ),
                                        fluidRow(
-                                         column(width = 1),
+                                         column(3,
+                                                style='padding-top:20px;padding-bottom:10px; padding-left:10px',
+                                                valueBoxOutput("resu4", width = "50%")),
+                                         column(3,
+                                                style='padding-top:20px;padding-bottom:10px; padding-left:10px',
+                                                valueBoxOutput("resu5", width = "50%")),
+                                         column(3,
+                                                style='padding-top:20px;padding-bottom:10px; padding-left:10px',
+                                                valueBoxOutput("resu6", width = "50%")),
+                                         column(3,
+                                                style='padding-top:20px;padding-bottom:10px; padding-left:10px',
+                                                valueBoxOutput("resu7", width = "50%"))
+                                       ),
+                                  
+                                       fluidRow(
                                          column(width = 3,
-                                         dateInput("date", label = h3("Date input"), value = "2020-10-18")
-                                       )
+                                                        dateInput("date",
+                                                                  h3(p("Fecha de envío de mensaje",style="color:#FFFFFF")),
+                                                                  value = "2020-10-18")
+                                         ),
+                                         column(6,
+                                                tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                          textAreaInput("caption",
+                                                        h3(p("Escriba el mensaje a enviar",style="color:#FFFFFF")),
+                                                        "", width = "710px")),
+                                         column(3,
+                                                style='padding-top:40px;padding-bottom:5px; padding-left:10px',
+                                                actionButton(inputId = "pp", label = 'Envíe el mensaje'))
+                                         
+                                       ),
+                                       fluidRow(
+                                         column(3,
+                                                style='padding-top:40px;padding-bottom:50px; padding-left:10px',
+                                                tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                                selectInput("cat", 
+                                                            h3(p("Categoría del establecimiento",
+                                                                 style="color:#FFFFFF")),
+                                                            choices = categorias,
+                                                            selected = NA,
+                                                            multiple = F)
+                                         ),
+                                         column(3,
+                                                style='padding-top:40px;padding-bottom:50px; padding-left:10px',
+                                                tags$head(tags$style(HTML('
+                                            #prod { color:#FFFFFF  ;padding-top:0px}'))),
+                                                selectInput("lug", 
+                                                            h3(p("Nombre del establecimiento",style="color:#FFFFFF")),
+                                                            choices = lugares,
+                                                            selected = NA,
+                                                            multiple = T)
+                                         )
+                                         ),
+                                       fluidRow(column(12)),
+                                       fluidRow()
+                                        
                                        )
                               )
                   ),
@@ -247,7 +329,7 @@ border-color: transparent;
                   
                 )
   )
-)
+
 
 
 
@@ -258,8 +340,46 @@ border-color: transparent;
 
 
 # Define server logic required
-server <- function(input, output) {
+server <- function(input, output, session) {
   #stuff in server
+  
+  reactivo <- eventReactive(input$Clic,
+                            {
+                              productos <- input$prod
+                              tc <- input$tc
+                              ing <- input$ingresos
+                              prob <- input$proba
+                              productos <- gsub(' $','',productos)
+                              
+                              variables_1 <- gsub(' ','_',paste(tolower(productos), 'pred', sep ='_'))
+                              
+                              gg <- data_clientes %>% 
+                                select(variables_1)
+                              
+                              proba_f <- apply(gg, 1, max)
+                              
+                              base_1 <- data_clientes %>% 
+                                mutate(P_final = proba_f) %>% 
+                                filter(tc == tc) %>% 
+                                filter(ingresos >= ing) %>% 
+                                select(id, variables_1, edad, ingresos, P_final, sexo) %>% 
+                                filter(P_final >= prob)
+                              
+                              return(list(base_cl = base_1))
+                              
+                            })
+  
+  
+  outVar <- reactive({
+    data <- esta %>% 
+    filter(Categoría == input$cat)
+  
+  unique(data$Nombre)
+    })
+  
+  observe({updateSelectInput(session, 'lug', choices = outVar())}) 
+  
+
   
   
   
@@ -308,8 +428,8 @@ server <- function(input, output) {
     
     ggplot(selTable, aes(x=hora_cierra, y=n)) +
       geom_line(color = 'white') + 
-      xlab("Hour") +
-      ylab("Sent messages") +
+      xlab("Hora") +
+      ylab("Mensajes enviados") +
       ylim(min_n, max_n) + 
       xlim(min_x, max_x) +
       scale_x_datetime(date_labels = "%H:%M:%S",limits=c(min_x, max_x)) +
@@ -323,7 +443,7 @@ server <- function(input, output) {
             axis.text.y=element_text(colour="white"),
             axis.title.y = element_text(colour = 'white')) +
       theme_hc()+ 
-      ggtitle("Number of sent messages every 30 min")
+      ggtitle("Numero de mensajes enviados cada 30 min")
     
     
   })
@@ -373,7 +493,7 @@ server <- function(input, output) {
      ylab("") +
      xlab("") +
      theme_hc()+
-     ggtitle("Top 5 of products whit message (Last 3Hours)")
+     ggtitle("Top 5 de productos con mensaje (Ult 3 horas)")
     
     
   })
@@ -422,19 +542,43 @@ server <- function(input, output) {
   })
   
   output$resu4 <- renderValueBox({
-    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
-             "Clientes que cumplen con el perfil", icon = icon("users"), color = "blue")
+    req(reactivo())
+    t1 <- reactivo()$base_cl
+    n1 <- nrow(t1)
+    n1 <- format(round(n1, 0), nsmall=0, big.mark=",")
+    valueBox(value = tags$p(n1, style = "font-size: 100%;"), 
+             "Clientes", icon = icon("users"), color = "blue")
   })
   
   output$resu5 <- renderValueBox({
-    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
+    req(reactivo())
+    t1 <- reactivo()$base_cl
+    n1 <- round(mean(t1$ingresos),2)
+    n1 <- format(round(n1, 0), nsmall=0, big.mark=",")
+    valueBox(value = tags$p(paste(n1, 'USD'), style = "font-size: 100%;"), 
              "Ingresos promedio", icon = icon("coins"), color = "blue")
   })
   
   output$resu6 <- renderValueBox({
-    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
+    req(reactivo())
+    t1 <- reactivo()$base_cl
+    n1 <- round(mean(t1$edad),1)
+    valueBox(value = tags$p(paste(n1, 'años'), style = "font-size: 100%;"), 
              "Edad promedio", icon = icon("user-clock"), color = "blue")
   })
+  
+  output$resu7 <- renderValueBox({
+    req(reactivo())
+    t1 <- reactivo()$base_cl
+    h1 <- round(sum(t1$sexo)/nrow(t1), 2)*100
+    m1 <- 100 - h1
+    
+    
+    
+    valueBox(value = tags$p(paste(h1, "% ", "-", m1 , "%", sep = ''), style = "font-size: 100%;"), 
+             "Proporción de hombres-mujeres", icon = icon("restroom"), color = "blue")
+  })
+  
   
   
   addClass(selector = "body", class = "sidebar-collapse")
