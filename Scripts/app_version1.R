@@ -1,7 +1,6 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
-setwd('/home/ubuntu')
 
 library(leaflet)
 library(dplyr)
@@ -81,7 +80,12 @@ base_final_4 <- base_final_3 %>%
   summarise(p = sum(Mensaje_Enviado)) %>% 
   ungroup() %>% 
   mutate(lon = sample(seq(-74.05393, -74.1080, l = 10000), length(unique(base_final_3$Establecimiento))),
-         lat = sample(seq(4.65386, 4.7082, l = 10000), length(unique(base_final_3$Establecimiento))))
+         lat = sample(seq(4.65386, 4.7082, l = 10000), length(unique(base_final_3$Establecimiento)))) %>% 
+  select(-p)
+
+
+base_final_3 <- base_final_3 %>% 
+  left_join(base_final_4)
 
 
 min_n <- min(summary_total$n)
@@ -103,6 +107,10 @@ max_ingresos <- max(data_clientes$ingresos)
 esta <- fread("Establecimientos.csv", header = T)
 categorias <- unique(esta$Categoría)
 lugares <- unique(esta$Nombre)
+
+imagen_p <- tags$a(tags$img(src="p5.png", height='81', width='256'), 
+                   style = "background-size:cover; background-position:center; position:absolute;right:2em")
+
 
 ui <- shinyUI(
   dashboardPage(dashboardHeader(title = span("",
@@ -157,8 +165,15 @@ border-color: transparent;
                  
                   tabsetPanel(type = 'tabs',
                               tabPanel('Resumen de oferta',
+                                       fluidRow(column(3),
+                                                column(4,
+                                                       style='padding-top:20px;padding-bottom:50px; padding-left:0px',
+                                                       
+                                                       imagen_p
+                                                ),
+                                                column(5)),
                                        fluidRow(
-                                         style='padding-top:20px;padding-bottom:10px; padding-left:0px',
+                                         style='padding-top:70px;padding-bottom:10px; padding-left:0px',
                                          valueBoxOutput("resu1"),
                                          valueBoxOutput("resu2"),
                                          valueBoxOutput("resu3")
@@ -167,8 +182,9 @@ border-color: transparent;
                                          column(width = 4),
                                          column(
                                            width = 4,
-                                           setSliderColor(c("white"), c(1)),
-                                           sliderInput("animation", "Time:",
+                                           setSliderColor(c("black"), c(1)),
+                                           sliderInput("animation", 
+                                                       h3(p("Hora",style="color:#FFFFFF")),
                                                        min = min(base_final$Hora),
                                                        max = max(base_final$Hora),
                                                        value = min(base_final$Hora),
@@ -210,16 +226,27 @@ border-color: transparent;
                                    
                               ), 
                               tabPanel('Campañas',
+                                       fluidRow(column(3),
+                                                column(4,
+                                                        style='padding-top:20px;padding-bottom:20px; padding-left:0px',
+                                                        
+                                                        imagen_p
+                                       ),
+                                       column(5)),
                                        fluidRow(
-                                         column(8),
                                          column(4,
+                                                style='padding-top:20px;padding-bottom:20px; padding-left:0px',
                                                 tags$head(tags$style(HTML(' #Reg { color:#FFFFFF  ;}'  ))),
                                                 selectInput("camp", 
                                                             h3(p("Seleccione la campaña",style="color:#FFFFFF")),
                                                             choices = c('GeoMensaje', 'Mensaje'),
                                                             multiple = F,
                                                             selected = NA)
-                                         )
+                                         ),
+                                         column(4),
+                                         column(4)
+                                        
+                                        
                                        ),
                                        fluidRow(
                                          column(width = 3,
@@ -401,7 +428,7 @@ server <- function(input, output, session) {
       arrange(desc(Hora))
     
     selTable <- Lista %>% 
-      select(-Hora)
+      select(-Hora, -lon, -lat)
     
     DT::datatable(data = selTable,
                   escape=FALSE, 
@@ -509,7 +536,14 @@ server <- function(input, output, session) {
   })
   
   observe({
-    leafletProxy("mapAct", data = base_final_4) %>%
+    req(filteredData())
+    data_p <- filteredData()
+    
+    data_p2 <- data_p %>% 
+      group_by(Establecimiento, lon, lat) %>% 
+      summarise(p = sum(Mensaje_Enviado))
+    
+    leafletProxy("mapAct", data = data_p2) %>%
       clearShapes() %>%
       addCircles(lng = ~lon, lat = ~lat,
                  radius = ~p, fillOpacity = 0.02,color = "#DF2935")
