@@ -28,6 +28,7 @@ library(SiMRiv)
 library(spatstat)
 library(tibble)
 library(dplyr)
+library(lubridate)
 #library(data.table)
 #
 # levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
@@ -319,6 +320,11 @@ base_jueves = base_jueves%>%
 aa=which(is.na(base_jueves$x))
 for(i in aa){
   base_jueves[i,]$x=base_jueves[i-1,]$x
+  base_jueves[i,]$y=base_jueves[i-1,]$y
 }
 
-
+pprest=base_jueves[(hour(base_jueves$fecha)>=11)&(hour(base_jueves$fecha)<=14),c("x","y")]
+ppbar=base_jueves[(id %in% dan)&
+                    (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))||
+                       (((hour(base_jueves$fecha)>=0))&((hour(base_jueves$fecha)>=5)))),c("x","y")]
+ppzc=base_jueves[day()]
