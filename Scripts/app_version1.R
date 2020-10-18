@@ -155,7 +155,8 @@ ui <- shinyUI(
                                        )
                                     
                                      
-                              )
+                              ),
+                              tabPanel('Campaigns')
                   )
                   
                 )
@@ -229,7 +230,7 @@ server <- function(input, output) {
             axis.title.x = element_text(colour = 'white'),
             axis.text.y=element_text(colour="white"),
             axis.title.y = element_text(colour = 'white')) +
-      ggtitle("Sent messages every 30 min")
+      ggtitle("Number of sent messages every 30 min")
     
     
   })
@@ -265,7 +266,9 @@ ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue
       scale_y_continuous(labels = scales::comma) +
       guides(color = FALSE, fill = FALSE) +
       theme_classic() +
-      theme(plot.title = element_text(hjust = 0.5, colour = 'white'),
+      theme(  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                              colour = "black"), 
+              plot.title = element_text(hjust = 0.5, colour = 'white'),
             axis.ticks.y = element_blank(),
             axis.text.y  = element_blank(),
             plot.margin = margin(1, 1, 1, 4, "cm"),
@@ -273,7 +276,6 @@ ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue
             plot.background=element_rect(fill = "#072146"),
             panel.background = element_rect(fill = '#072146'),
             panel.border = element_rect(colour = "#072146", fill=NA, size=1),
-            panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             axis.text.x=element_text(colour="white")) +
       ylab("") +
