@@ -28,7 +28,7 @@ library(SiMRiv)
 library(spatstat)
 library(tibble)
 library(dplyr)
-
+#library(data.table)
 #
 # levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
 # for(i in 1:(n*0.4)){
@@ -47,9 +47,12 @@ normalize <- function(x)
 # JUEVES
 min_time_jueves <- as.POSIXct("2020-01-01 06:00:00")
 sec_jueves <- seq(from = min_time_jueves, length.out = 10440, by = 30)
-
+X1= -71.1080
+Y1= 4.7082
+X2= -74.05393
+Y2= 4.65386
 # base
-n=1000
+n=100000
 base_jueves = expand.grid(sec_jueves, 1:n)
 colnames(base_jueves)=c("fecha","id")
 
@@ -58,7 +61,9 @@ set.seed(14)
 pp <- rpoispp(n)
 plot(density(pp))
 pi=tibble(id=1:n,x=pp$x[0:n],y=pp$y[0:n])
-
+# pi2=pi %>% 
+#   mutate(x=(x*(X1-X2))+X2,
+#          y=(y*(Y1-Y2))+Y2)
 # trabajadores:
 wk=sort(sample(1:n,n*0.6))
 # LUGARES DE TRABAJO 
@@ -66,7 +71,11 @@ set.seed(12345)
 pp <- rpoispp(n*0.6)
 plot(density(pp))
 wp=tibble(id= wk,x=pp$x[0:(n*0.6)],y=pp$y[0:(n*0.6)])
-
+# wp2=wp %>% 
+#   mutate(x=(x*(X1-X2))+X2,
+#          y=(y*(Y1-Y2))+Y2)
+# fwrite(pi2,"home.csv")
+# fwrite(wp2,"work.csv")
 # home to work
 hw = pi %>% 
   inner_join(wp, by="id") 
@@ -119,16 +128,16 @@ for(i in wk[-1]){
   sim.lw[,1]=normalize(sim.lw[,1])
   sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,120)+600
-  lun= lun  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])%>% 
-    add_row(x=rev(sim.lw[,1]), y=rev(sim.lw[,2]),id=i,fecha=sec_jueves[(a+170):(a+170+length(sim.lw[,1])-1)])
+  lun= lun  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)],ida=1)%>% 
+    add_row(x=rev(sim.lw[,1]), y=rev(sim.lw[,2]),id=i,fecha=sec_jueves[(a+170):(a+170+length(sim.lw[,1])-1)],ida=0)
   
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
 
 lun= lun %>% 
   left_join(wp,by="id") %>% 
-  mutate(x=x.x+x.y,
-         y=y.x+y.y
+  mutate(x=ifelse(ida==1,x.x+x.y,0),
+         y=ifelse(ida==1,y.x+y.y,0)
          ) %>% 
   select(c(x,y,id,fecha))
 
@@ -136,10 +145,14 @@ lun= lun %>%
 nwk=which(!(1:n %in% wk))
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
 sim.lw <- simulate(levy.walker, rpois(1,1100))
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 a=rpois(1,180)
 df = tibble(x=sim.lw[,1],y=sim.lw[,2],id=nwk[1],fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 for(i in nwk[-1]){
   sim.lw <- simulate(levy.walker, rpois(1,1100))
+  sim.lw[,1]=normalize(sim.lw[,1])
+  sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,120)
   df= df  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
@@ -155,10 +168,14 @@ nodan=which(!(1:n %in% dan))
 # no trabajadores 
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
 sim.lw <- simulate(levy.walker, rpois(1,600))
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 a=rpois(1,180)+4620
 viedan = tibble(x=sim.lw[,1],y=sim.lw[,2],id=nwk[1],fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 for(i in nwk[-1]){
   sim.lw <- simulate(levy.walker, rpois(1,600))
+  sim.lw[,1]=normalize(sim.lw[,1])
+  sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,180)+4620
   viedan= viedan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
@@ -173,11 +190,15 @@ viedan$y=normalize(viedan$y)
 
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
 sim.lw <- simulate(levy.walker, rpois(1,2160))
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 a=rpois(1,180)+6000
 sabdan = tibble(x=sim.lw[,1],y=sim.lw[,2],id=dan[1],fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 for(i in dan[-1]){
   sim.lw <- simulate(levy.walker, rpois(1,2160))
+  sim.lw[,1]=normalize(sim.lw[,1])
+  sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,180)+6000
   sabdan= sabdan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
@@ -189,11 +210,15 @@ sabdan$y=normalize(sabdan$y)
 
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
 sim.lw <- simulate(levy.walker, rpois(1,1300))
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 a=rpois(1,100)+6000
 sabnodan = tibble(x=sim.lw[,1],y=sim.lw[,2],id=nodan[1],fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 for(i in nodan[-1]){
   sim.lw <- simulate(levy.walker, rpois(1,1300))
+  sim.lw[,1]=normalize(sim.lw[,1])
+  sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,100)+6000
   sabnodan= sabnodan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 }
@@ -204,11 +229,15 @@ sabnodan$y=normalize(sabnodan$y)
 
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
 sim.lw <- simulate(levy.walker, rpois(1,1300))
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 a=rpois(1,180)+8780
 dom = tibble(x=sim.lw[,1],y=sim.lw[,2],id=1,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 for(i in 2:n){
   sim.lw <- simulate(levy.walker, rpois(1,1300))
+  sim.lw[,1]=normalize(sim.lw[,1])
+  sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,180)+8780
   dom= dom  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 }
