@@ -1,6 +1,7 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
+setwd('/home/ubuntu')
 
 library(leaflet)
 library(dplyr)
