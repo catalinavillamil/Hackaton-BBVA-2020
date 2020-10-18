@@ -12,24 +12,70 @@ library(ggpmisc)
 library(ggiraph)
 library(DT)
 library(shinyWidgets)
-
+library(SiMRiv)
+library(spatstat)
+library(tibble)
+library(dplyr)
+library(lubridate)
+#library(data.table)
 # Define UI for application that draws a map
-
+normalize <- function(x)
+{
+  a=max(abs(max(x)),abs(min(x)))
+  return((x) /(a))
+}
+minmax <- function(x)
+{
+  return((x- min(x)) /(max(x)-min(x)))
+}
 min_time <- as.POSIXct("2020-01-01 05:00:00")
 
-secuencia <- seq(from = min_time, length.out = 100, by = "mins")
-latitudes <- seq(4.64, 4.66, l = 100)
-longitudes <- seq(-74.1, -74.062, l = 100)
-tomados <- rbinom(100,1,0.3)
+secuencia <- seq(from = min_time, length.out = 550, by = "mins")
+set.seed(9)
+levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
+sim.lw <- simulate(levy.walker, rpois(1,600))
+# plot(sim.lw[450:550,], type = "l", asp = 1, main = "L ́evy-like walker")
+# sim.lw[,1]=normalize(sim.lw[,1])
+# sim.lw[,2]=normalize(sim.lw[,2])
+# plot(sim.lw[], type = "l", asp = 1, main = "L ́evy-like walker")
+juana=data.frame(minmax(sim.lw[1:550,1]),minmax(sim.lw[1:550,2]),"Juana",secuencia)
+trabajo=data.frame(juana[which.max(sim.lw[,1])-10,1],juana[which.max(sim.lw[,1])-10,2],"trabajo",secuencia[295:400])
+casa= data.frame(juana[1,1],juana[1,2],"casa",secuencia[1:40])
+restaurante=data.frame(juana[500,1],juana[500,2],"restaurante",secuencia[1:40])
+set.seed(14)
+n=20
+pp <- rpoispp(n)
+plot(density(pp))
+establecimientos=data.frame(pp$x[0:17],pp$y[0:17],"establecimientos",rep(secuencia[400:470],each=17))
+colnames(juana)=c("x","y","label","time")
+colnames(trabajo)=c("x","y","label","time")
+colnames(casa)=c("x","y","label","time")
+colnames(restaurante)=c("x","y","label","time")
+colnames(establecimientos)=c("x","y","label","time")
+X1= -74.1080
+Y1= 4.7082
+X2= -74.05393
+Y2= 4.65386
 
-
-
-data<- data.frame(time = c(secuencia),
-                  lat = latitudes,
-                  lon = longitudes,
+df=rbind(juana,trabajo,casa,restaurante,establecimientos) %>% 
+  mutate(x=(x*(X2-X1))+X1,
+         y=(y*(Y1-Y2))+Y2)
+data<- data.frame(time = df$time,
+                  lat = df$y,
+                  lon = df$x,
                   accuracy = 10,
-                  visto = tomados)
+                  visto = df$label)
+anglerIcon <- makeIcon(
+  iconUrl = "https://i.imgur.com/otS5q0K.png",
+  iconWidth = 64, iconHeight = 64,
+  iconAnchorX = 22, iconAnchorY = 94,
+  shadowUrl = "http://leafletjs.com/examples/custom-icons/leaf-shadow.png",
+  shadowWidth = 50, shadowHeight = 64,
+  shadowAnchorX = 4, shadowAnchorY = 62
+)
 
+leaflet(data = quakes[1:4,]) %>% addTiles() %>%
+  addMarkers(~long, ~lat, icon = anglerIcon)
 ui <- shinyUI(
   dashboardPage(dashboardHeader(title = span("Proyecto BA (Enciso-Merchan) - Universidad de los Andes",
                                              style = "color: white; font-size: 14px"),
@@ -43,15 +89,15 @@ ui <- shinyUI(
                               ')))),
                 dashboardBody(
                   tabsetPanel(type = 'tabs',
-                              tabPanel('An�lisis Departamentos',
+                              tabPanel('An?lisis Departamentos',
                                        column(
                                          width = 9,
                                          sliderInput("animation", "Time:",
-                                                     min = as.POSIXct("2020-01-01 05:00:00"),
-                                                     max = as.POSIXct("2020-01-01 06:00:00"),
-                                                     value = as.POSIXct("2020-01-01 05:00:00"),
+                                                     min = min(data$time),
+                                                     max = max(data$time),
+                                                     value = min(data$time),
                                                      animate =
-                                                       animationOptions(interval = 600, loop = TRUE))
+                                                       animationOptions(interval = 6000, loop = TRUE))
                                        ), 
                                        column(
                                          width = 9,
@@ -107,7 +153,7 @@ server <- function(input, output) {
   
   output$mapAct<-renderLeaflet({
     leaflet() %>%
-      addTiles() %>%
+      addTiles() %>% 
       addProviderTiles(providers$CartoDB.Positron)%>%
       fitBounds(lng1 = -74.05393,lat1 = 4.655,
                 lng2 = -74.09,lat2 = 4.66)# set to reactive minimums
@@ -117,7 +163,8 @@ server <- function(input, output) {
     leafletProxy("mapAct", data = filteredData()) %>%
       clearShapes() %>%
       addCircles(lng = ~lon, lat = ~lat,
-                 radius = ~accuracy, fillOpacity = 0.02,color = "#DF2935")
+                 radius = ~accuracy, fillOpacity = 0.02,color = "#DF2935") %>%
+      addMarkers(lng =~lon,lat = ~lat, icon = anglerIcon)
   })
   
   
