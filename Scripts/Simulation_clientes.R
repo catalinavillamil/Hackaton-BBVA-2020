@@ -28,6 +28,7 @@ library(SiMRiv)
 library(spatstat)
 library(tibble)
 library(dplyr)
+library(lubridate)
 #library(data.table)
 #
 # levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
@@ -47,12 +48,12 @@ normalize <- function(x)
 # JUEVES
 min_time_jueves <- as.POSIXct("2020-01-01 06:00:00")
 sec_jueves <- seq(from = min_time_jueves, length.out = 10440, by = 30)
-X1= -71.1080
+X1= -74.1080
 Y1= 4.7082
 X2= -74.05393
 Y2= 4.65386
 # base
-n=100000
+n=1000
 base_jueves = expand.grid(sec_jueves, 1:n)
 colnames(base_jueves)=c("fecha","id")
 
@@ -61,7 +62,7 @@ set.seed(14)
 pp <- rpoispp(n)
 plot(density(pp))
 pi=tibble(id=1:n,x=pp$x[0:n],y=pp$y[0:n])
-# pi2=pi %>% 
+# pi2=pi %>%
 #   mutate(x=(x*(X1-X2))+X2,
 #          y=(y*(Y1-Y2))+Y2)
 # trabajadores:
@@ -71,7 +72,7 @@ set.seed(12345)
 pp <- rpoispp(n*0.6)
 plot(density(pp))
 wp=tibble(id= wk,x=pp$x[0:(n*0.6)],y=pp$y[0:(n*0.6)])
-# wp2=wp %>% 
+# wp2=wp %>%
 #   mutate(x=(x*(X1-X2))+X2,
 #          y=(y*(Y1-Y2))+Y2)
 # fwrite(pi2,"home.csv")
@@ -92,9 +93,11 @@ for(i in 2:nrow(hw)){
   yy=seq(as.numeric(hw[1,3]),as.numeric(hw[1,5]),,nn)
   a=rpois(1,100)
   c1= c1  %>% add_row(x = xx+rnorm(nn,0,0.001), y = yy+rnorm(nn,0,0.001), id =i,fecha=sec_jueves[a:(a+length(xx)-1)]) %>% 
-    add_row(x=xx+rnorm(nn,0,0.001),y=yy+rnorm(nn,0,0.001),id=1,fecha=sec_jueves[(a+2880):(a+2880+length(xx)-1)])
+    add_row(x=xx+rnorm(nn,0,0.001),y=yy+rnorm(nn,0,0.001),id=i,fecha=sec_jueves[(a+2880):(a+2880+length(xx)-1)])
 }
 
+base_jueves = base_jueves %>% 
+  left_join(c1, by = c("id","fecha"))
 
 #work to home
 nn=rpois(1,80)
@@ -110,9 +113,14 @@ for(i in 2:nrow(hw)){
   yy=seq(as.numeric(hw[1,5]),as.numeric(hw[1,3]),,nn)
   a=rpois(1,180)+1320
   c2= c2  %>% add_row(x = xx+rnorm(nn,0,0.001), y = yy+rnorm(nn,0,0.001), id =i,fecha=sec_jueves[a:(a+length(xx)-1)]) %>% 
-    add_row(x=xx+rnorm(nn,0,0.001),y=yy+rnorm(nn,0,0.001),id=1,fecha=sec_jueves[(a+2880):(a+2880+length(xx)-1)])
+    add_row(x=xx+rnorm(nn,0,0.001),y=yy+rnorm(nn,0,0.001),id=i,fecha=sec_jueves[(a+2880):(a+2880+length(xx)-1)])
 }
 
+base_jueves = base_jueves %>% 
+  left_join(c2, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha))
 
 # almuerzo
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(1, 0.08)) 
@@ -128,17 +136,23 @@ for(i in wk[-1]){
   sim.lw[,1]=normalize(sim.lw[,1])
   sim.lw[,2]=normalize(sim.lw[,2])
   a=rpois(1,120)+600
-  lun= lun  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)],ida=1)%>% 
-    add_row(x=rev(sim.lw[,1]), y=rev(sim.lw[,2]),id=i,fecha=sec_jueves[(a+170):(a+170+length(sim.lw[,1])-1)],ida=0)
+  lun= lun  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])%>% 
+    add_row(x=rev(sim.lw[,1]), y=rev(sim.lw[,2]),id=i,fecha=sec_jueves[(a+170):(a+170+length(sim.lw[,1])-1)])
   
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
 
 lun= lun %>% 
   left_join(wp,by="id") %>% 
-  mutate(x=ifelse(ida==1,x.x+x.y,0),
-         y=ifelse(ida==1,y.x+y.y,0)
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
          ) %>% 
+  select(c(x,y,id,fecha))
+
+base_jueves = base_jueves %>% 
+  left_join(lun, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
   select(c(x,y,id,fecha))
 
 # no trabajadores 
@@ -157,8 +171,17 @@ for(i in nwk[-1]){
   df= df  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
-df$x=normalize(df$x)
-df$y=normalize(df$y)
+df= df %>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
+  ) %>% 
+  select(c(x,y,id,fecha))
+base_jueves = base_jueves %>% 
+  left_join(df, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha))
 
 # VIERNES
 
@@ -180,9 +203,17 @@ for(i in nwk[-1]){
   viedan= viedan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
-viedan$x=normalize(viedan$x)
-viedan$y=normalize(viedan$y)
-
+viedan= viedan %>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
+  ) %>% 
+  select(c(x,y,id,fecha))
+base_jueves = base_jueves %>% 
+  left_join(viedan, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha))
 #SABADO
 
 #bares
@@ -203,8 +234,17 @@ for(i in dan[-1]){
   sabdan= sabdan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
   #plot(sim.lw, type = "l", asp = 1, main = "L ́evy-like walker")
 }
-sabdan$x=normalize(sabdan$x)
-sabdan$y=normalize(sabdan$y)
+sabdan= sabdan %>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
+  ) %>% 
+  select(c(x,y,id,fecha))
+base_jueves = base_jueves %>% 
+  left_join(sabdan, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha))
 
 #no bares
 
@@ -222,9 +262,17 @@ for(i in nodan[-1]){
   a=rpois(1,100)+6000
   sabnodan= sabnodan  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 }
-sabnodan$x=normalize(sabnodan$x)
-sabnodan$y=normalize(sabnodan$y)
-
+sabnodan= sabnodan %>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
+  ) %>% 
+  select(c(x,y,id,fecha))
+base_jueves = base_jueves %>% 
+  left_join(sabnodan, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha))
 #DOMINGO  
 
 levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
@@ -242,8 +290,42 @@ for(i in 2:n){
   dom= dom  %>% add_row(x = sim.lw[,1], y = sim.lw[,2], id =i,fecha=sec_jueves[a:(a+length(sim.lw[,1])-1)])
 }
 
-dom$x=normalize(dom$x)
-dom$y=normalize(dom$y)
+dom= dom %>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=x.x+x.y,
+         y=y.x+y.y
+  ) %>% 
+  select(c(x,y,id,fecha))
 
+base_jueves = base_jueves %>% 
+  left_join(lun, by = c("id","fecha")) %>% 
+  mutate(x=ifelse(is.na(x.x),x.y,x.x),
+         y=ifelse(is.na(y.x),y.y,y.x)) %>% 
+  select(c(x,y,id,fecha)) 
 
+base_jueves = base_jueves%>% 
+  left_join(pi,by="id") %>% 
+  mutate(x=ifelse((is.na(x.x)&
+                     (((hour(fecha)<9)&
+                     (hour(fecha)>=0))||
+                     ((hour(fecha)>=24)&
+                     (hour(fecha)>=18)))), x.y,x.x),
+         y=ifelse((is.na(y.x)&
+                     (((hour(fecha)<9)&
+                         (hour(fecha)>=0))||
+                        ((hour(fecha)>=24)&
+                           (hour(fecha)>=18)))), y.y,y.x)) %>% 
+  select(c(x,y,id,fecha)) 
 
+aa=which(is.na(base_jueves$x))
+for(i in aa){
+  base_jueves[i,]$x=base_jueves[i-1,]$x
+  base_jueves[i,]$y=base_jueves[i-1,]$y
+}
+
+pprest=base_jueves[(hour(base_jueves$fecha)>=11)&(hour(base_jueves$fecha)<=14),c("x","y")]
+ppbar=base_jueves[(id %in% dan)&
+                    (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))||
+                       (((hour(base_jueves$fecha)>=0))&((hour(base_jueves$fecha)>=5)))),c("x","y")]
+ppzc=base_jueves[(day(base_jueves$fecha) %in% 3:4)&
+                 (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))),c("x","y")]
