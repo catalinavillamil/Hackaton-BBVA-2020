@@ -188,7 +188,7 @@ border-color: transparent;
                                            width = 4,
                                            setSliderColor(c("black"), c(1)),
                                            sliderInput("animation", 
-                                                       h3(p("Hora",style="color:#FFFFFF")),
+                                                       h3(p("Hora: Dar play ",style="color:#FFFFFF")),
                                                        min = min(base_final$Hora),
                                                        max = max(base_final$Hora),
                                                        value = min(base_final$Hora),
