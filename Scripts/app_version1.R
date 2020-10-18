@@ -94,7 +94,8 @@ data_clientes <- fread('db_clientes_perfil.csv')
 
 opciones_prod <- toupper(gsub('_',' ',gsub('pred','',names(data_clientes)[grepl( 'pred', names(data_clientes))])))
 opciones_tc <- c('SI','NO')
-
+min_ingresos <- min(data_clientes$ingresos)
+max_ingresos <- max(data_clientes$ingresos)
 
 
 ui <- shinyUI(
@@ -204,7 +205,9 @@ border-color: transparent;
                               ), 
                               tabPanel('Campaigns',
                                        fluidRow(
+                                         column(width = 1),
                                          column(width = 3,
+                                                style='padding-top:20px;padding-bottom:5px; padding-left:10px',
                                        selectInput(inputId = 'prod',
                                                    label= "Producto",
                                                    choices = opciones_prod,
@@ -212,16 +215,30 @@ border-color: transparent;
                                                    multiple = TRUE)
                                          ),
                                        column(width = 3,
+                                              style='padding-top:20px;padding-bottom:5px; padding-left:10px',
                                          selectInput(inputId = 'tc',
                                                      label= "Tarjeta Credito",
                                                      choices = opciones_tc,
                                                      selected = NA,
                                                      multiple = FALSE)
                                        ),
-                                       column(width = 3,
+                                       column(width = 4,
+                                              style='padding-top:20px;padding-bottom:5px; padding-left:10px',
                                               sliderInput("ingresos", "Ingresos",
-                                                          min = 0, max = 1000, value = 0
+                                                          min = min_ingresos, max = max_ingresos, value = max_ingresos
                                               )
+                                       )
+                                       ),
+                                       fluidRow(
+                                         style='padding-top:0px;padding-bottom:10px; padding-left:0px',
+                                         valueBoxOutput("resu4"),
+                                         valueBoxOutput("resu5"),
+                                         valueBoxOutput("resu6")
+                                       ),
+                                       fluidRow(
+                                         column(width = 1),
+                                         column(width = 3,
+                                         dateInput("date", label = h3("Date input"), value = "2020-10-18")
                                        )
                                        )
                               )
@@ -402,6 +419,21 @@ server <- function(input, output) {
                                                               ), "%)", sep = ''), style = "font-size: 150%;"), 
              "Mensajes abiertos", 
              icon = icon("award"), color = "aqua")
+  })
+  
+  output$resu4 <- renderValueBox({
+    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
+             "Clientes que cumplen con el perfil", icon = icon("users"), color = "blue")
+  })
+  
+  output$resu5 <- renderValueBox({
+    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
+             "Ingresos promedio", icon = icon("coins"), color = "blue")
+  })
+  
+  output$resu6 <- renderValueBox({
+    valueBox(value = tags$p(10, style = "font-size: 150%;"), 
+             "Edad promedio", icon = icon("user-clock"), color = "blue")
   })
   
   
