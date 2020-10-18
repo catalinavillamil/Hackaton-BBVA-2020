@@ -22,6 +22,11 @@ latitudes <- seq(4.64, 4.66, l = 100)
 longitudes <- seq(-74.1, -74.062, l = 100)
 tomados <- rbinom(100,1,0.3)
 
+levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.01, 0.01)) 
+sim.lw <- simulate(levy.walker, rpois(1,600))
+plot(sim.lw[sim.lw$V1>], type = "l", asp = 1, main = "L ÃÅevy-like walker")
+sim.lw[,1]=normalize(sim.lw[,1])
+sim.lw[,2]=normalize(sim.lw[,2])
 
 
 data<- data.frame(time = c(secuencia),
@@ -43,7 +48,7 @@ ui <- shinyUI(
                               ')))),
                 dashboardBody(
                   tabsetPanel(type = 'tabs',
-                              tabPanel('An·lisis Departamentos',
+                              tabPanel('An?lisis Departamentos',
                                        column(
                                          width = 9,
                                          sliderInput("animation", "Time:",
