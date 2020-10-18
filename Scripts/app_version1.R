@@ -12,13 +12,17 @@ library(shinyWidgets)
 library(shinyjs)
 library(ggimage)
 library(ggthemes)
-
+library(lubridate)
+library(data.table)
 
 # Define UI for application that draws a map
 
 min_time <- as.POSIXct("2020-01-01 06:00:00")
 
+
 secuencia <- seq(from = min_time, length.out = 1800, by = 30)
+
+
 
 clientes <- as.character(1:15000)
 
@@ -61,11 +65,22 @@ base_final_3 <- base_final_2 %>%
   mutate(sec_cliente = 1:n()) %>% 
   mutate(Mensaje_Enviado = ifelse(sec_cliente >= 3 , 0, Mensaje_Enviado)) %>% 
   select(-sec_cliente, -dif_horas, -Hora_Envio, -Producto_Enviado) %>% 
-  left_join(d)
+  left_join(d) %>% 
+  mutate(Mensaje_abierto = rbinom(1,1,0.05))
 
 summary_total <-  base_final_3 %>% 
   group_by(hora_cierra) %>% 
   summarise(n=n())
+
+
+
+
+base_final_4 <- base_final_3 %>% 
+  group_by(Establecimiento) %>% 
+  summarise(p = sum(Mensaje_Enviado)) %>% 
+  ungroup() %>% 
+  mutate(lon = sample(seq(-74.05393, -74.1080, l = 10000), length(unique(base_final_3$Establecimiento))),
+         lat = sample(seq(4.65386, 4.7082, l = 10000), length(unique(base_final_3$Establecimiento))))
 
 
 min_n <- min(summary_total$n)
@@ -74,16 +89,20 @@ min_x <- min(summary_total$hora_cierra)
 max_x <- max(summary_total$hora_cierra)
 saltos <- seq(min_x, max_x, l = 10)
 
-df2 <- data.frame(Producto = c("Producto_1", "Producto_2", "Producto_3", "Producto_4", "Producto_5"),
-                  Image = sample(c("image1.png","image2.png", "image1.png", "image1.png", "image2.png")),
-                  stringsAsFactors = F)
+
+data_clientes <- fread('db_clientes_perfil.csv')
+
+opciones_prod <- toupper(gsub('_',' ',gsub('pred','',names(data_clientes)[grepl( 'pred', names(data_clientes))])))
+opciones_tc <- c('SI','NO')
+
 
 
 ui <- shinyUI(
   dashboardPage(dashboardHeader(title = span("",
                                              style = "color: white; font-size: 14px")
                                 ),
-                dashboardSidebar(),
+                dashboardSidebar(
+                ),
                 dashboardBody(
                   tags$style(HTML('
                        /* logo */
@@ -114,15 +133,34 @@ ui <- shinyUI(
            "  border-color: transparent;",
            "  background-color: transparent;",
            "}"
+           .nav-tabs {
+  background-color: #006747;
+    }
+
+.nav-tabs-custom .nav-tabs li.active:hover a, .nav-tabs-custom .nav-tabs li.active a {
+background-color: transparent;
+border-color: transparent;
+}
+
+.nav-tabs-custom .nav-tabs li.active {
+    border-top-color: #006747;
+}
                        ')
                   ),
-                  useShinyjs(),
+                 
                   tabsetPanel(type = 'tabs',
                               tabPanel('Offer Summary',
-                                       fluidRow(offset = 0, 
-                                         column(width = 2, offset = 0),
+                                       fluidRow(
+                                         style='padding-top:20px;padding-bottom:10px; padding-left:0px',
+                                         valueBoxOutput("resu1"),
+                                         valueBoxOutput("resu2"),
+                                         valueBoxOutput("resu3")
+                                       ),
+                                       fluidRow(
+                                         column(width = 4),
                                          column(
-                                           width = 9, offset = 0,
+                                           width = 4,
+                                           setSliderColor(c("white"), c(1)),
                                            sliderInput("animation", "Time:",
                                                        min = min(base_final$Hora),
                                                        max = max(base_final$Hora),
@@ -132,32 +170,63 @@ ui <- shinyUI(
                                                          animationOptions(interval = 3000, loop = TRUE))
                                          )
                                        ), 
-                                       fluidRow(offset = 0,
+                                       fluidRow(
                                        column(width = 1),
                                        column(
-                                         width = 5, offset = 0,
-                                         style='padding-top:0px;padding-bottom:10px; padding-left:0px',
+                                         width = 5, 
+                                         style='padding-top:0px;padding-bottom:20px; padding-left:0px',
                                          plotOutput(outputId = 'tabla_summary', width = "80%")
                                        ),
                                    
                                        column(
-                                         width = 5, offset = 0,
-                                         style='padding-top:0px;padding-bottom:30px; padding-left:0px',
+                                         width = 5, 
+                                         style='padding-top:0px;padding-bottom:20px; padding-left:0px',
                                          plotOutput(outputId = 'ordering', width = "80%")
-                                       )
+                                       ),
+                                       column(width = 1),
                                        ),
                                        fluidRow(
                                          column(width = 1),
-                                     column(
-                                         width = 10,
-                                         DT::dataTableOutput(outputId = 'tabla_inicial', width = "100%")
+                                         column(
+                                           width = 5,
+                                           style='padding-top:20px;padding-bottom:20px; padding-left:10px',
+                                           leafletOutput("mapAct", width = "80%")
+                                         ),
+                                         column(
+                                           width = 5,
+                                           style='padding-top:20px;padding-bottom:20px; padding-left:10px',
+                                           div(DT::dataTableOutput(outputId = 'tabla_inicial'),
+                                               style = "font-size: 70%; width: 70%" )
+                                         )
+                                       )
+                                      
+                                   
+                              ), 
+                              tabPanel('Campaigns',
+                                       fluidRow(
+                                         column(width = 3,
+                                       selectInput(inputId = 'prod',
+                                                   label= "Producto",
+                                                   choices = opciones_prod,
+                                                   selected = NA,
+                                                   multiple = TRUE)
+                                         ),
+                                       column(width = 3,
+                                         selectInput(inputId = 'tc',
+                                                     label= "Tarjeta Credito",
+                                                     choices = opciones_tc,
+                                                     selected = NA,
+                                                     multiple = FALSE)
+                                       ),
+                                       column(width = 3,
+                                              sliderInput("ingresos", "Ingresos",
+                                                          min = 0, max = 1000, value = 0
+                                              )
                                        )
                                        )
-                                    
-                                     
-                              ),
-                              tabPanel('Campaigns')
-                  )
+                              )
+                  ),
+                  useShinyjs()
                   
                 )
   )
@@ -174,12 +243,17 @@ ui <- shinyUI(
 # Define server logic required
 server <- function(input, output) {
   #stuff in server
+  
+  
+  
   filteredData <- reactive({
     #add rollified thing
     from<- input$animation - 50
     till<- input$animation + 50
     base_final_3 %>% filter(Hora <= till) %>% 
-      arrange(desc(Hora))
+      arrange(desc(Hora)) %>% 
+      mutate(Mensaje_abierto = ifelse(Mensaje_abierto == 1, 1,
+                                      rbinom(1,1,0.02)))
   })
   
   
@@ -189,7 +263,8 @@ server <- function(input, output) {
       select(-hora_cierra) %>% 
       arrange(desc(Hora))
     
-    selTable <- Lista
+    selTable <- Lista %>% 
+      select(-Hora)
     
     DT::datatable(data = selTable,
                   escape=FALSE, 
@@ -230,6 +305,7 @@ server <- function(input, output) {
             axis.title.x = element_text(colour = 'white'),
             axis.text.y=element_text(colour="white"),
             axis.title.y = element_text(colour = 'white')) +
+      theme_hc()+ 
       ggtitle("Number of sent messages every 30 min")
     
     
@@ -245,8 +321,7 @@ server <- function(input, output) {
       summarise(n=sum(Mensaje_Enviado))
     
     selTable <- Lista %>% 
-      arrange(desc(n)) %>% 
-      left_join(df2)
+      arrange(desc(n)) 
     
    colors_blue <- data.frame(Producto = unique(selTable$Producto),
             colores_blue = RColorBrewer::brewer.pal(length(unique(selTable$Producto)), 'Blues'))
@@ -255,40 +330,82 @@ server <- function(input, output) {
    selTable <- selTable %>% 
      left_join(colors_blue)
    
-ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue, color = colores_blue)) +
-      geom_col() +
-      scale_fill_manual(values = selTable$colores_blue)  +
-      geom_text(aes(y = 0, label = Producto), size = 5, color="black", hjust = -0.05) +
-      geom_image(aes(x = Producto, image = Image), y = 0,  # add geom_image layer
-                 size = 0.1, hjust = 1,
-                 inherit.aes = FALSE) +
-      coord_flip(clip = "off", expand = FALSE) +
-      scale_y_continuous(labels = scales::comma) +
-      guides(color = FALSE, fill = FALSE) +
-      theme_classic() +
-      theme(  panel.grid.major = element_line(size = 0.5, linetype = 'solid',
-                                              colour = "black"), 
-              plot.title = element_text(hjust = 0.5, colour = 'white'),
-            axis.ticks.y = element_blank(),
-            axis.text.y  = element_blank(),
-            plot.margin = margin(1, 1, 1, 4, "cm"),
-            axis.title.y=element_blank(),
-            plot.background=element_rect(fill = "#072146"),
-            panel.background = element_rect(fill = '#072146'),
-            panel.border = element_rect(colour = "#072146", fill=NA, size=1),
-            panel.grid.minor = element_blank(),
-            axis.text.x=element_text(colour="white")) +
-      ylab("") +
-  ggtitle("Top 5 of products whit message (Last 3Hours)")
+   ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue, color = "black")) +
+     geom_col() +
+     scale_fill_manual(values = selTable$colores_blue)  +
+     geom_text(aes(y = 0, label = Producto), size = 5, color="black", hjust = 0) +
+     scale_colour_manual(values = selTable$colores_blue)+
+     # geom_image(aes(x = Producto, image = Image), y = 0,  # add geom_image layer
+     #            size = 0.2, hjust = 1,
+     #            inherit.aes = FALSE) +
+     coord_flip(clip = "off", expand = FALSE) +
+     scale_y_continuous(labels = scales::comma) +
+     guides(color = FALSE, fill = FALSE) +
+     # theme_classic() +
+     theme(plot.title = element_text(hjust = 0.5, colour = 'white'),
+           axis.ticks.y = element_blank(),
+           axis.text.y  = element_blank(),
+           # plot.margin = margin(1, 1, 1, 4, "cm"),
+           axis.title.y=element_blank(),
+           plot.background=element_rect(fill = "#072146"),
+           panel.background = element_rect(fill = '#072146'),
+           panel.border = element_rect(colour = "#072146", fill=NA, size=1),
+           panel.grid.major = element_blank(),
+           panel.grid.minor = element_blank(),
+           axis.text.x=element_text(colour="white")) +
+     ylab("") +
+     xlab("") +
+     theme_hc()+
+     ggtitle("Top 5 of products whit message (Last 3Hours)")
     
     
   })
   
   
   
+  output$mapAct<-renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addProviderTiles(providers$CartoDB.Positron)%>%
+      fitBounds(lng1 = -74.05393,lat1 = 4.65386,
+                lng2 = -74.1080,lat2 = 4.7082)# set to reactive minimums
+  })
+  
+  observe({
+    leafletProxy("mapAct", data = base_final_4) %>%
+      clearShapes() %>%
+      addCircles(lng = ~lon, lat = ~lat,
+                 radius = ~p, fillOpacity = 0.02,color = "#DF2935")
+  })
   
   
-  # addClass(selector = "body", class = "sidebar-collapse")
+  output$resu1 <- renderValueBox({
+    req(filteredData())
+    mensajes_enviados <- sum(filteredData()$Mensaje_Enviado)
+    valueBox(value = tags$p(mensajes_enviados, style = "font-size: 150%;"), 
+             "Mensajes enviados", icon = icon("envelope"), color = "blue")
+  })
+  
+  output$resu2 <- renderValueBox({
+    req(filteredData())
+    personas <- length(unique(filteredData()$Id_Cliente))
+    valueBox(value = tags$p(personas, style = "font-size: 150%;"), 
+             "Clientes han recibido mensaje", icon = icon("users"), 
+             color = "light-blue")
+  })
+  
+  output$resu3 <- renderValueBox({
+    req(filteredData())
+    mensajes_leidos <- sum(filteredData()$Mensaje_abierto)
+    mensajes_enviados <- sum(filteredData()$Mensaje_Enviado)
+    valueBox(value = tags$p(paste(mensajes_leidos, "(", round(100*mensajes_leidos/mensajes_enviados,1
+                                                              ), "%)", sep = ''), style = "font-size: 150%;"), 
+             "Mensajes abiertos", 
+             icon = icon("award"), color = "aqua")
+  })
+  
+  
+  addClass(selector = "body", class = "sidebar-collapse")
   
   
 }
