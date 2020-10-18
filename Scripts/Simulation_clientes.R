@@ -42,6 +42,10 @@ normalize <- function(x)
   a=max(abs(max(x)),abs(min(x)))
   return((x) /(a))
 }
+minmax <- function(x)
+{
+  return((x- min(x)) /(max(x)-min(x)))
+}
 
 # To get a vector, use apply instead of lapply
 
@@ -317,15 +321,39 @@ base_jueves = base_jueves%>%
                            (hour(fecha)>=18)))), y.y,y.x)) %>% 
   select(c(x,y,id,fecha)) 
 
-aa=which(is.na(base_jueves$x))
-for(i in aa){
-  base_jueves[i,]$x=base_jueves[i-1,]$x
-  base_jueves[i,]$y=base_jueves[i-1,]$y
-}
+base_jueves$x=na_interpolation(base_jueves$x)
+base_jueves$y=na_interpolation(base_jueves$y)
+plot(density(base_jueves$x))
+
+#base_jueves$x=minmax(base_jueves$x)
+#base_jueves$y=minmax(base_jueves$y)
+#plot(density(base_jueves$x))
 
 pprest=base_jueves[(hour(base_jueves$fecha)>=11)&(hour(base_jueves$fecha)<=14),c("x","y")]
-ppbar=base_jueves[(id %in% dan)&
+
+ppbar=base_jueves[(base_jueves$id %in% dan)&
                     (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))||
                        (((hour(base_jueves$fecha)>=0))&((hour(base_jueves$fecha)>=5)))),c("x","y")]
+
 ppzc=base_jueves[(day(base_jueves$fecha) %in% 3:4)&
-                 (((hour(base_jueves$fecha)>=22)&(hour(base_jueves$fecha)<=24))),c("x","y")]
+                   (((hour(base_jueves$fecha)>=8)&(hour(base_jueves$fecha)<=11))||
+                      (((hour(base_jueves$fecha)>=2))&((hour(base_jueves$fecha)>=6)))),c("x","y")]
+ppprest=ppp(pprest$x,pprest$y)
+pppbar=ppp(ppbar$x,ppbar$y)
+pppzc=ppp(ppzc$x,ppzc$y)
+plot(density(pppbar))
+plot(density(ppprest))
+plot(density(pppzc))
+rest=rpoispp(intensity(ppprest), win=Window(ppprest))
+resti=sample(1:rest$n,22)
+rest=data.frame(rest$x[resti],rest$y[resti])
+plot(rest)
+bar=rpoispp(intensity(pppbar), win=Window(pppbar))
+bari=sample(1:bar$n,22)
+bar=data.frame(bar$x[bari],rest$y[bari])
+plot(bar)
+zc=rpoispp(intensity(pppzc), win=Window(pppzc))
+
+rpoispp(ex=cells)
+
+
