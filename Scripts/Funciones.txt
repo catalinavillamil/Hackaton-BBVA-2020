@@ -1,0 +1,86 @@
+
+simular_producto<-function(df,df.perfiles,perfil,n_per,par.edad,par.sexo,par.ing,par.est,par.edu,par.nse,
+                           par.sector,par.saldo,par.vehiculo,par.pre_vehiculo,par.hipo,par.per_hipo,par.linv,
+                           par.pre_linv,par.tc,par.pre_tc,par.endeud,par.no_vehi,par.no_hipo,par.no_tc,
+                           par.score,prob.viajes,prop.viajes,prop.rest,prop.vest,prop.lico,prop.acc,prob.carro.1){
+  
+  
+  id_per<-sample(df[is.na(df$perfil),"id"],n_per)
+  df[df$id%in%id_per,"perfil"]<-df.perfiles[perfil,"perfiles"]
+  
+   edad_val<-round(rgamma(n_per,par.edad,0.9),0)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"edad"]<-ifelse(edad_val<18,18,edad_val)
+  # Sexo (1 hombre)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"sexo"]<-ifelse(runif(n_per,0,1)<par.sexo,0,1)
+  # Ingreso
+  ing_s=round(rpareto(n_per,par.ing,1),0)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]<-ifelse(ing_s>100000,100000,ing_s)
+  # Estado civil (1 casado)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"estado_civil"]<-ifelse(runif(n_per,0,1)<par.est,0,1)
+  # Nivel de educación
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"nivel_edu"] <- rMultinom(do.call("rbind", replicate(n_per,par.edu, simplify = F )),1)[,1]
+  # Nivel de socioecómico
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"nse"]<-rMultinom(do.call("rbind", replicate(n_per,par.nse, simplify = F )),1)[,1]
+  # Sector de trabajo (1 privado)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"sector_trabajo"]<-ifelse(runif(n_per,0,1)<par.sector,0,1)
+  # Teléfono
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"tel"]<-paste(31, round(runif(n_per,1000000,99999999),0), sep="")
+  # Saldo cuenta de ahorros
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"Saldo_ah"]<-df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*runif(n_per,par.saldo[1],par.saldo[2])
+  # Producto de vehículo con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_vehiculo"]<-ifelse(runif(n_per,0,1)<par.vehiculo,0,1)
+  # Prepaprobado con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prea_vehiculo"]<-ifelse(runif(n_per,0,1)<par.pre_vehiculo,0,1)
+  # Producto hipotecario con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_hipoteca"]<-ifelse(runif(n_per,0,1)<par.hipo,0,1)
+  # Prepaprobado de hipotecario con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prea_hipoteca"]<-ifelse(runif(n_per,0,1)<par.per_hipo,0,1)
+  # Producto de libre inversión con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_libre_inv"]<-ifelse(runif(n_per,0,1)<par.linv,0,1)
+  # Prepaprobado de libre inversióncon BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prea_libre_inv"]<-ifelse(runif(n_per,0,1)<par.pre_linv,0,1)
+  # Productos tc con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_tc"]<-rMultinom(do.call("rbind", replicate(n_per,par.tc, simplify = F )),1)[,1]-1
+  # Prepaprobado tc BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prea_tc"]<-ifelse(runif(n_per,0,1)<par.pre_tc,0,1)
+  # Desembolsado a hipotecario con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"desemb_hipoteca"]<-ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_hipoteca"]==1,
+                                                                                            28*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]+abs(rnorm(n_per,df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                                sd(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]))),0)
+  # Desembolsado a vehiculo con BBVA
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"desemb_auto"]<-ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_vehiculo"]==1,
+                                                                                        5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]+abs(rnorm(n_per,df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                           sd(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]))),0)
+  # Endeudamiento en el sistema
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"endeudamiento"]<-df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*runif(n_per, par.endeud[1],par.endeud[2])
+  # Número Producto vehículos en el sistema (otras entidades)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"no_prod_vehi"]<-ifelse(runif(n_per,0,1)<par.no_vehi,0,1)
+  # Número Producto hipoteca en el sistema (otras entidades)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"no_prod_hipoteca"]<-ifelse(runif(n_per,0,1)<par.no_hipo,0,1)
+  # Número Producto tc en el sistema (otras entidades)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"no_prod_tc"]<-ifelse(runif(n_per,0,1)<par.no_tc,0,1)
+  # SCORE BURO
+  a = round(rnorm(n_per, par.score[1], par.score[2]),0)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"score_riesgo"]<-ifelse(a >1000,1000,a)
+  # Gastos de viajes
+  prob.viajes=prob.viajes+ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_libre_inv"]>0,0.15,0)+ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_tc"]>0,0.05,0)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"viajes"]<-ifelse(runif(n_per,0,1)<prob.viajes,1,0)*(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*prop.viajes+abs(rnorm(n_per,prop.viajes*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                                                                   sd(prop.viajes*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"])/20)))
+  # Gastos de restaurantes 
+  tener_tc<-ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_tc"]>0,1,0)
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"restaurante"]<-tener_tc*(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*prop.rest+abs(rnorm(n_per,prop.rest/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                             sd(prop.rest/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"])/20)))*6
+  # Gastos de vestuario 
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"vestuario"]<-tener_tc*(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*prop.vest+abs(rnorm(n_per,prop.vest/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                           sd(prop.vest/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"])/20)))*6
+  
+  # Gastos de licores 
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"licores"]<-tener_tc*(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*prop.lico+abs(rnorm(n_per,prop.lico/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                         sd(prop.lico/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"])/20)))*6
+  # Gastos de accesorios 
+  carro<-ifelse(runif(n_per,0,1)<ifelse(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"prod_vehiculo"]>0,1,prob.carro.1),1,0)
+  
+  df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"accesorios_auto"]<-tener_tc*carro*(df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"]*prop.acc+abs(rnorm(n_per,prop.acc/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"],
+                                                                                                                                                                                      sd(prop.acc/5*df[!is.na(df$perfil)&df$perfil==df.perfiles[perfil,"perfiles"],"ingresos"])/20)))*6
+  return(df)
+}
