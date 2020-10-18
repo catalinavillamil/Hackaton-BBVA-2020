@@ -1,7 +1,7 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
-setwd('/home/ubuntu')
+#setwd('/home/ubuntu')
 
 library(leaflet)
 library(dplyr)
@@ -11,14 +11,14 @@ library(ggplot2)
 # library(ggpmisc)
 library(shinyWidgets)
 library(shinyjs)
-library(ggimage)
+#library(ggimage)
 library(ggthemes)
 library(lubridate)
 library(data.table)
 
 # Define UI for application that draws a map
 
-load('data_Cata.Rda')
+load('data_cata.Rda')
 min_time <- as.POSIXct("2020-01-01 06:00:00")
 
 

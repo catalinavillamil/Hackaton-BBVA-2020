@@ -376,15 +376,14 @@ es= cbind(es,base_jueves[,c("fecha","id")])
 es= es %>% arrange(id,X2) %>% 
   group_by(id) %>% 
   mutate(n=1:n()) %>% 
-  filter(n<=100) %>%
+  filter(n<=10) 
+
+save(es, file = 'data_cata.Rda')
 es=es %>% 
   select(-X2 ,-n)
-save(es, file = 'data_cata.Rda')
-
 aux= est %>% 
   mutate(lon=(x*(X1-X2))+X2,
          lat=(y*(Y1-Y2))+Y2,
          id=1:106)
-colnames(est)=c("")
 save(aux, file = 'data_cata_est.Rda')
   
