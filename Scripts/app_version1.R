@@ -17,25 +17,35 @@ library(data.table)
 
 # Define UI for application that draws a map
 
+load('data_Cata.Rda')
 min_time <- as.POSIXct("2020-01-01 06:00:00")
 
 
-secuencia <- seq(from = min_time, length.out = 1800, by = 30)
+secuencia <- seq(from=min_time, length.out = 10440, by = 30)
+  
+  
+esta <- fread("Establecimientos.csv", header = T)[,1:6] %>% 
+  mutate(seqq = ifelse(Producto == 'Restaurantes', 1,
+                       ifelse(Producto == 'Licores', 2,
+                              ifelse(Producto == 'Vestuario',3,
+                                     ifelse(Producto == 'LI', 4,
+                                            ifelse(Producto == 'Hipotecario',5,6)))))) %>% 
+  arrange(seqq) %>% 
+  mutate(Id_Esta = 1:106) %>% 
+  select(-seqq, -Dias, - Horario, -Zona)
+
+head(es)
+head(esta)
+base_final <- es %>% 
+  left_join(esta,
+            by = c('X1' = 'Id_Esta')) %>% 
+  select(Id_Cliente = id,
+         Hora = fecha,
+         Establecimiento = Nombre,
+         Producto,
+         Id_Est = X1)
 
 
-
-clientes <- as.character(1:15000)
-
-producto <- paste('Producto', 1:5, sep = '_')
-
-establecimiento <- paste('Establecimiento', 1:150, sep ='_')
-
-filas <- 10000
-
-base_final <- data.frame(Hora = sample(secuencia, filas, replace = TRUE),
-                         Id_Cliente = sample(clientes, filas, replace = TRUE),
-                         Producto = sample(producto, filas, replace = TRUE),
-                         Establecimiento = sample(establecimiento, filas, replace = TRUE))
 
 base_final_2 <- base_final %>% 
   arrange(Id_Cliente, Hora)
@@ -66,23 +76,16 @@ base_final_3 <- base_final_2 %>%
   mutate(Mensaje_Enviado = ifelse(sec_cliente >= 3 , 0, Mensaje_Enviado)) %>% 
   select(-sec_cliente, -dif_horas, -Hora_Envio, -Producto_Enviado) %>% 
   left_join(d) %>% 
-  mutate(Mensaje_abierto = rbinom(1,1,0.05))
+  mutate(Mensaje_abierto = rbinom(1,1,0.02))
 
 summary_total <-  base_final_3 %>% 
   group_by(hora_cierra) %>% 
   summarise(n=n())
 
+load('data_cata_est.Rda')
 
-
-
-base_final_4 <- base_final_3 %>% 
-  group_by(Establecimiento) %>% 
-  summarise(p = sum(Mensaje_Enviado)) %>% 
-  ungroup() %>% 
-  mutate(lon = sample(seq(-74.05393, -74.1080, l = 10000), length(unique(base_final_3$Establecimiento))),
-         lat = sample(seq(4.65386, 4.7082, l = 10000), length(unique(base_final_3$Establecimiento)))) %>% 
-  select(-p)
-
+base_final_4 <- aux %>% 
+  select(Id_Est = id, lon, lat)
 
 base_final_3 <- base_final_3 %>% 
   left_join(base_final_4)
@@ -92,7 +95,7 @@ min_n <- min(summary_total$n)
 max_n <- max(summary_total$n)
 min_x <- min(summary_total$hora_cierra)
 max_x <- max(summary_total$hora_cierra)
-saltos <- seq(min_x, max_x, l = 10)
+saltos <- seq(min_x, max_x, l = 20)
 
 
 data_clientes <- fread('db_clientes_perfil.csv')
@@ -104,8 +107,8 @@ min_ingresos <- min(data_clientes$ingresos)
 max_ingresos <- max(data_clientes$ingresos)
 
 
-esta <- fread("Establecimientos.csv", header = T)
-categorias <- unique(esta$Categoría)
+
+categorias <- unique(esta$Categoria)
 lugares <- unique(esta$Nombre)
 
 imagen_p <- tags$a(tags$img(src="p5.png", height='81', width='256'), 
@@ -190,7 +193,7 @@ border-color: transparent;
                                                        value = min(base_final$Hora),
                                                        step = 1800, 
                                                        animate =
-                                                         animationOptions(interval = 3000, loop = TRUE))
+                                                         animationOptions(interval = 1000, loop = TRUE))
                                          )
                                        ), 
                                        fluidRow(
@@ -399,7 +402,7 @@ server <- function(input, output, session) {
   
   outVar <- reactive({
     data <- esta %>% 
-    filter(Categoría == input$cat)
+    filter(Categoria == input$cat)
   
   unique(data$Nombre)
     })
@@ -417,7 +420,7 @@ server <- function(input, output, session) {
     base_final_3 %>% filter(Hora <= till) %>% 
       arrange(desc(Hora)) %>% 
       mutate(Mensaje_abierto = ifelse(Mensaje_abierto == 1, 1,
-                                      rbinom(1,1,0.02)))
+                                      rbinom(1,1,0.001)))
   })
   
   
@@ -478,14 +481,17 @@ server <- function(input, output, session) {
   output$ordering <- renderPlot({
     req(filteredData())
     
-    fecha_filtro <- max(filteredData()$Hora) - 10800
+    fecha_filtro <- max(filteredData()$Hora) 
+    
     Lista <- filteredData() %>% 
-      filter(Hora >= fecha_filtro) %>% 
+      # filter(Hora >= fecha_filtro) %>% 
       group_by(Producto) %>% 
       summarise(n=sum(Mensaje_Enviado))
     
     selTable <- Lista %>% 
       arrange(desc(n)) 
+    
+    selTable <- selTable[1:5,]
     
    colors_blue <- data.frame(Producto = unique(selTable$Producto),
             colores_blue = RColorBrewer::brewer.pal(length(unique(selTable$Producto)), 'Blues'))
