@@ -29,6 +29,9 @@ library(spatstat)
 library(tibble)
 library(dplyr)
 library(lubridate)
+library(imputeTS)
+library(fields)
+library(doBy)
 #library(data.table)
 #
 # levy.walker <- species(state.RW() + state.CRW(0.99), trans = transitionMatrix(0.005, 0.005)) 
@@ -57,7 +60,7 @@ Y1= 4.7082
 X2= -74.05393
 Y2= 4.65386
 # base
-n=1000
+n=10
 base_jueves = expand.grid(sec_jueves, 1:n)
 colnames(base_jueves)=c("fecha","id")
 
@@ -345,15 +348,35 @@ plot(density(pppbar))
 plot(density(ppprest))
 plot(density(pppzc))
 rest=rpoispp(intensity(ppprest), win=Window(ppprest))
+bar=rpoispp(intensity(pppbar), win=Window(pppbar))
+zc=rpoispp(intensity(pppzc), win=Window(pppzc))
+set.seed(2)
 resti=sample(1:rest$n,22)
 rest=data.frame(rest$x[resti],rest$y[resti])
 plot(rest)
-bar=rpoispp(intensity(pppbar), win=Window(pppbar))
 bari=sample(1:bar$n,22)
-bar=data.frame(bar$x[bari],rest$y[bari])
+bar=data.frame(bar$x[bari],bar$y[bari])
 plot(bar)
-zc=rpoispp(intensity(pppzc), win=Window(pppzc))
+zci=sample(1:zc$n,62)
+zc=data.frame(zc$x[zci],zc$y[zci])
+plot(zc)
+colnames(rest)=c("x","y")
+colnames(bar)=c("x","y")
+colnames(zc)=c("x","y")
 
-rpoispp(ex=cells)
+est=cbind(rbind(rest,bar,zc),c(rep("Restaurantes",22),rep("Licores",22),rep("Vestuario",26),rep("LI",8),rep("Hipotecario",14),rep("Autos",14)))
+colnames(est)=c("x","y","Producto")
+mat=rdist(est[,c("x","y")],base_jueves[,c("x","y")])
 
-
+func=function(y,n=1){
+  return(c(which.minn(as.vector(y),n),min(as.vector(y))))
+}
+es=data.frame(t(apply(mat,2,func)))
+es= cbind(es,base_jueves[,c("fecha","id")])
+es= es %>% arrange(id,X2) %>% 
+  group_by(id) %>% 
+  mutate(n=1:n()) %>% 
+  filter(n<=10) %>%
+es=es %>% 
+  select(-X2 ,-n)
+save(es, file = 'data_cata.Rda')
