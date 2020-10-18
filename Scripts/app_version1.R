@@ -504,7 +504,7 @@ server <- function(input, output, session) {
    ggplot(data = selTable, aes(x = reorder(Producto,n),  y = n, fill = colores_blue, color = "black")) +
      geom_col() +
      scale_fill_manual(values = selTable$colores_blue)  +
-     geom_text(aes(y = 0, label = Producto), size = 5, color="black", hjust = 0) +
+     geom_text(aes(y = 0, label = Producto), size = 5, color="white", hjust = 0) +
      scale_colour_manual(values = selTable$colores_blue)+
      # geom_image(aes(x = Producto, image = Image), y = 0,  # add geom_image layer
      #            size = 0.2, hjust = 1,
