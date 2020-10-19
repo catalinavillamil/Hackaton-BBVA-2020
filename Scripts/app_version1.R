@@ -1,7 +1,7 @@
 # this is a shiny web app. Save as app.r
 #lastupdate: acvillami
 
-setwd('/home/ubuntu')
+#setwd('/home/ubuntu')
 
 library(leaflet)
 library(dplyr)
@@ -9,7 +9,7 @@ library(shiny)
 library(shinydashboard)
 library(ggplot2)
 # library(ggpmisc)
-library(shinyWidgets)
+library(shinyWidgets) 
 library(shinyjs)
 #library(ggimage)
 library(ggthemes)
